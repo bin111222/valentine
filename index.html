@@ -65,7 +65,7 @@
         }
 
         #yesBtn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #667eea 0%, #b530ac 100%);
             color: white;
             border: 3px solid white;
         }
@@ -152,27 +152,48 @@
         const noBtn = document.getElementById('noBtn');
         const yesBtn = document.getElementById('yesBtn');
         const gifContainer = document.getElementById('gifContainer');
+        const h1 = document.querySelector('h1');
 
-        // Make the No button repel from cursor
-        document.addEventListener('mousemove', (e) => {
+        // Detect mobile device
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+        
+        // Mobile settings: larger detection radius and stronger repel
+        const detectionRadius = isMobile ? 250 : 150;
+        const maxMovement = isMobile ? 120 : 50;
+
+        function repelButton(touchX, touchY) {
             const rect = noBtn.getBoundingClientRect();
             const btnCenterX = rect.left + rect.width / 2;
             const btnCenterY = rect.top + rect.height / 2;
             
-            const mouseX = e.clientX;
-            const mouseY = e.clientY;
-            
-            const distanceX = mouseX - btnCenterX;
-            const distanceY = mouseY - btnCenterY;
+            const distanceX = touchX - btnCenterX;
+            const distanceY = touchY - btnCenterY;
             const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
             
-            // If cursor is within 150px of button, repel it
-            if (distance < 150) {
-                const repelStrength = (150 - distance) / 150 * 50; // Max 50px movement
+            // Check distance from Yes button to avoid overlap
+            const yesRect = yesBtn.getBoundingClientRect();
+            const yesCenterX = yesRect.left + yesRect.width / 2;
+            const yesCenterY = yesRect.top + yesRect.height / 2;
+            const distanceFromYes = Math.sqrt(
+                Math.pow(btnCenterX - yesCenterX, 2) + 
+                Math.pow(btnCenterY - yesCenterY, 2)
+            );
+            
+            // If cursor/touch is within detection radius, repel it
+            if (distance < detectionRadius) {
+                const repelStrength = (detectionRadius - distance) / detectionRadius * maxMovement;
                 const angle = Math.atan2(distanceY, distanceX);
                 
-                const newX = btnCenterX - Math.cos(angle) * repelStrength;
-                const newY = btnCenterY - Math.sin(angle) * repelStrength;
+                let newX = btnCenterX - Math.cos(angle) * repelStrength;
+                let newY = btnCenterY - Math.sin(angle) * repelStrength;
+                
+                // On mobile, also push away from Yes button if too close
+                if (isMobile && distanceFromYes < 200) {
+                    const yesAngle = Math.atan2(btnCenterY - yesCenterY, btnCenterX - yesCenterX);
+                    const pushAway = (200 - distanceFromYes) / 200 * 80;
+                    newX -= Math.cos(yesAngle) * pushAway;
+                    newY -= Math.sin(yesAngle) * pushAway;
+                }
                 
                 // Keep button within viewport bounds
                 const maxX = window.innerWidth - rect.width;
@@ -186,7 +207,20 @@
                 noBtn.style.top = finalY + 'px';
                 noBtn.style.transform = 'translate(0, 0)';
             }
+        }
+
+        // Handle mouse movement (desktop)
+        document.addEventListener('mousemove', (e) => {
+            repelButton(e.clientX, e.clientY);
         });
+
+        // Handle touch movement (mobile)
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                repelButton(touch.clientX, touch.clientY);
+            }
+        }, { passive: true });
 
         // Prevent clicking on No button
         noBtn.addEventListener('click', (e) => {
@@ -199,8 +233,20 @@
             noBtn.style.top = randomY + 'px';
         });
 
+        // Prevent touch on No button (mobile)
+        noBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Move button away even more
+            const randomX = Math.random() * (window.innerWidth - noBtn.offsetWidth);
+            const randomY = Math.random() * (window.innerHeight - noBtn.offsetHeight);
+            noBtn.style.left = randomX + 'px';
+            noBtn.style.top = randomY + 'px';
+        });
+
         // Handle Yes button click
         yesBtn.addEventListener('click', () => {
+            h1.textContent = 'I love youuuuu';
             gifContainer.classList.add('show');
             // Hide buttons after showing GIF
             yesBtn.style.display = 'none';

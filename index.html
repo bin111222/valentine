@@ -103,6 +103,7 @@
             margin-bottom: 2rem;
             position: relative;
             min-height: 100px;
+            isolation: isolate;
         }
 
         button {
@@ -124,6 +125,9 @@
             transform-origin: center;
             transition: transform 0.3s ease;
             z-index: 2;
+            will-change: transform;
+            backface-visibility: hidden;
+            position: relative;
         }
 
         #yesBtn:hover {
@@ -140,8 +144,9 @@
             color: white;
             border: 4px solid white;
             position: relative;
-            transition: all 0.2s ease;
+            transition: left 0.3s ease, top 0.3s ease, transform 0.2s ease;
             z-index: 1;
+            will-change: transform, left, top;
         }
 
         #noBtn:hover {
@@ -400,7 +405,10 @@
         }
 
         // Handle No button click
-        noBtn.addEventListener('click', () => {
+        noBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
             noClickCount++;
             
             // Show rejection message
@@ -410,55 +418,62 @@
                 message.textContent = "I'm still not giving up! 💪";
             }
 
-            // Grow Yes button
-            yesScale += 0.3;
-            yesBtn.style.transform = `scale(${yesScale})`;
-            yesBtn.style.transition = 'transform 0.3s ease';
-
-            // Move No button away from Yes button to prevent overlap
-            const yesRect = yesBtn.getBoundingClientRect();
-            const noRect = noBtn.getBoundingClientRect();
-            const yesCenterX = yesRect.left + yesRect.width / 2;
-            const yesCenterY = yesRect.top + yesRect.height / 2;
-            const noCenterX = noRect.left + noRect.width / 2;
-            const noCenterY = noRect.top + noRect.height / 2;
-            
-            const distanceX = noCenterX - yesCenterX;
-            const distanceY = noCenterY - yesCenterY;
-            const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
-            
-            // If buttons are too close, push No button away
-            const minDistance = (yesRect.width * yesScale / 2) + (noRect.width / 2) + 30;
-            if (distance < minDistance) {
-                const angle = Math.atan2(distanceY, distanceX);
-                const pushDistance = minDistance - distance + 20;
-                const pushX = Math.cos(angle) * pushDistance;
-                const pushY = Math.sin(angle) * pushDistance;
+            // Batch all DOM updates together to prevent layout thrashing
+            requestAnimationFrame(() => {
+                // Grow Yes button smoothly - do this first
+                yesScale += 0.3;
+                yesBtn.style.transform = `scale(${yesScale})`;
                 
-                // Get current position
-                const currentLeft = noRect.left;
-                const currentTop = noRect.top;
-                
-                // Calculate new position
-                let newLeft = currentLeft + pushX;
-                let newTop = currentTop + pushY;
-                
-                // Keep within viewport bounds
-                const maxX = window.innerWidth - noRect.width;
-                const maxY = window.innerHeight - noRect.height;
-                newLeft = Math.max(0, Math.min(maxX, newLeft));
-                newTop = Math.max(0, Math.min(maxY, newTop));
-                
-                noBtn.style.position = 'fixed';
-                noBtn.style.left = newLeft + 'px';
-                noBtn.style.top = newTop + 'px';
-            } else {
-                // Shake No button if not too close
-                noBtn.style.animation = 'shake 0.5s';
-                setTimeout(() => {
-                    noBtn.style.animation = '';
-                }, 500);
-            }
+                // Wait for next frame to get accurate positions after scale
+                requestAnimationFrame(() => {
+                    // Move No button away from Yes button to prevent overlap
+                    const yesRect = yesBtn.getBoundingClientRect();
+                    const noRect = noBtn.getBoundingClientRect();
+                    const yesCenterX = yesRect.left + yesRect.width / 2;
+                    const yesCenterY = yesRect.top + yesRect.height / 2;
+                    const noCenterX = noRect.left + noRect.width / 2;
+                    const noCenterY = noRect.top + noRect.height / 2;
+                    
+                    const distanceX = noCenterX - yesCenterX;
+                    const distanceY = noCenterY - yesCenterY;
+                    const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+                    
+                    // If buttons are too close, push No button away
+                    const minDistance = (yesRect.width / 2) + (noRect.width / 2) + 30;
+                    if (distance < minDistance) {
+                        const angle = Math.atan2(distanceY, distanceX);
+                        const pushDistance = minDistance - distance + 20;
+                        const pushX = Math.cos(angle) * pushDistance;
+                        const pushY = Math.sin(angle) * pushDistance;
+                        
+                        // Get current position
+                        const currentLeft = noRect.left;
+                        const currentTop = noRect.top;
+                        
+                        // Calculate new position
+                        let newLeft = currentLeft + pushX;
+                        let newTop = currentTop + pushY;
+                        
+                        // Keep within viewport bounds
+                        const maxX = window.innerWidth - noRect.width;
+                        const maxY = window.innerHeight - noRect.height;
+                        newLeft = Math.max(0, Math.min(maxX, newLeft));
+                        newTop = Math.max(0, Math.min(maxY, newTop));
+                        
+                        // Use fixed positioning to avoid affecting Yes button layout
+                        noBtn.style.position = 'fixed';
+                        noBtn.style.left = newLeft + 'px';
+                        noBtn.style.top = newTop + 'px';
+                        noBtn.style.transform = 'none';
+                    } else {
+                        // Shake No button if not too close
+                        noBtn.style.animation = 'shake 0.5s';
+                        setTimeout(() => {
+                            noBtn.style.animation = '';
+                        }, 500);
+                    }
+                });
+            });
 
             // Scroll to message if it's below viewport
             setTimeout(() => {

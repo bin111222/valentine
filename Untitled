@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Will you be my Valentine?</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .container {
+            text-align: center;
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 3rem;
+            color: white;
+            margin-bottom: 3rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .buttons-container {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 1rem 2.5rem;
+            font-size: 1.5rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        #yesBtn {
+            background: linear-gradient(135deg, #667eea 0%, #b530ac 100%);
+            color: white;
+            border: 3px solid white;
+        }
+
+        #yesBtn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        #noBtn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: 3px solid white;
+            position: relative;
+            transition: none;
+        }
+
+        .gif-container {
+            margin-top: 2rem;
+            display: none;
+        }
+
+        .gif-container.show {
+            display: block;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .gif-container img {
+            max-width: 400px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .credit {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            z-index: 100;
+        }
+
+        .credit a {
+            color: white;
+            text-decoration: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .credit a:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Will you be my Valentine?</h1>
+        <div class="buttons-container">
+            <button id="yesBtn">Yes</button>
+            <button id="noBtn">No</button>
+        </div>
+        <div class="gif-container" id="gifContainer">
+            <img src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExNm5pcWs3bXhoYmIyZTc5YTBrZW5wcDd1NnR2M3MzZnN6NXFtZGNnbiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/MDJ9IbxxvDUQM/giphy.gif" alt="Valentine GIF">
+        </div>
+    </div>
+    <div class="credit">
+        Made with love by <a href="https://1942studio.com" target="_blank">1942 Studio</a> 
+    </div>
+
+    <script>
+        const noBtn = document.getElementById('noBtn');
+        const yesBtn = document.getElementById('yesBtn');
+        const gifContainer = document.getElementById('gifContainer');
+        const h1 = document.querySelector('h1');
+
+        // Detect mobile device
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+        
+        // Mobile settings: larger detection radius and stronger repel
+        const detectionRadius = isMobile ? 250 : 150;
+        const maxMovement = isMobile ? 120 : 50;
+
+        function repelButton(touchX, touchY) {
+            const rect = noBtn.getBoundingClientRect();
+            const btnCenterX = rect.left + rect.width / 2;
+            const btnCenterY = rect.top + rect.height / 2;
+            
+            const distanceX = touchX - btnCenterX;
+            const distanceY = touchY - btnCenterY;
+            const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+            
+            // Check distance from Yes button to avoid overlap
+            const yesRect = yesBtn.getBoundingClientRect();
+            const yesCenterX = yesRect.left + yesRect.width / 2;
+            const yesCenterY = yesRect.top + yesRect.height / 2;
+            const distanceFromYes = Math.sqrt(
+                Math.pow(btnCenterX - yesCenterX, 2) + 
+                Math.pow(btnCenterY - yesCenterY, 2)
+            );
+            
+            // If cursor/touch is within detection radius, repel it
+            if (distance < detectionRadius) {
+                const repelStrength = (detectionRadius - distance) / detectionRadius * maxMovement;
+                const angle = Math.atan2(distanceY, distanceX);
+                
+                let newX = btnCenterX - Math.cos(angle) * repelStrength;
+                let newY = btnCenterY - Math.sin(angle) * repelStrength;
+                
+                // On mobile, also push away from Yes button if too close
+                if (isMobile && distanceFromYes < 200) {
+                    const yesAngle = Math.atan2(btnCenterY - yesCenterY, btnCenterX - yesCenterX);
+                    const pushAway = (200 - distanceFromYes) / 200 * 80;
+                    newX -= Math.cos(yesAngle) * pushAway;
+                    newY -= Math.sin(yesAngle) * pushAway;
+                }
+                
+                // Keep button within viewport bounds
+                const maxX = window.innerWidth - rect.width;
+                const maxY = window.innerHeight - rect.height;
+                
+                const finalX = Math.max(0, Math.min(maxX, newX - rect.width / 2));
+                const finalY = Math.max(0, Math.min(maxY, newY - rect.height / 2));
+                
+                noBtn.style.position = 'fixed';
+                noBtn.style.left = finalX + 'px';
+                noBtn.style.top = finalY + 'px';
+                noBtn.style.transform = 'translate(0, 0)';
+            }
+        }
+
+        // Handle mouse movement (desktop)
+        document.addEventListener('mousemove', (e) => {
+            repelButton(e.clientX, e.clientY);
+        });
+
+        // Handle touch movement (mobile)
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                repelButton(touch.clientX, touch.clientY);
+            }
+        }, { passive: true });
+
+        // Prevent clicking on No button
+        noBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Move button away even more
+            const randomX = Math.random() * (window.innerWidth - noBtn.offsetWidth);
+            const randomY = Math.random() * (window.innerHeight - noBtn.offsetHeight);
+            noBtn.style.left = randomX + 'px';
+            noBtn.style.top = randomY + 'px';
+        });
+
+        // Prevent touch on No button (mobile)
+        noBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Move button away even more
+            const randomX = Math.random() * (window.innerWidth - noBtn.offsetWidth);
+            const randomY = Math.random() * (window.innerHeight - noBtn.offsetHeight);
+            noBtn.style.left = randomX + 'px';
+            noBtn.style.top = randomY + 'px';
+        });
+
+        // Handle Yes button click
+        yesBtn.addEventListener('click', () => {
+            h1.textContent = 'I love youuuuu';
+            gifContainer.classList.add('show');
+            // Hide buttons after showing GIF
+            yesBtn.style.display = 'none';
+            noBtn.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
